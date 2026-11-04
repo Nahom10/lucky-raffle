@@ -14,6 +14,8 @@ Deno.serve(async (request) => {
     if (!botToken || !jwtSecret || !url || !serviceKey) throw new Error('Server authentication is not configured');
     const telegram = await verifyTelegramInitData(initData, botToken);
     const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
+    const { data: contact, error: contactError } = await admin.from('telegram_contacts').select('phone,name').eq('telegram_id', telegram.id).maybeSingle();
+    if (contactError) throw contactError;
     let { data: profile, error } = await admin.from('profiles').select('*').eq('telegram_id', telegram.id).maybeSingle();
     if (error) throw error;
     if (!profile) {
@@ -23,8 +25,12 @@ Deno.serve(async (request) => {
       });
       if (createError || !created.user) throw createError || new Error('Could not create player');
       const { data, error: profileError } = await admin.from('profiles').insert({
-        id: created.user.id, telegram_id: telegram.id, name: telegram.first_name || telegram.username || `Player ${telegram.id}`,
+        id: created.user.id, telegram_id: telegram.id, name: contact?.name || telegram.first_name || telegram.username || `Player ${telegram.id}`, phone: contact?.phone || null,
       }).select().single();
+      if (profileError) throw profileError;
+      profile = data;
+    } else if (contact?.phone && profile.phone !== contact.phone) {
+      const { data, error: profileError } = await admin.from('profiles').update({ phone: contact.phone, name: contact.name }).eq('id', profile.id).select().single();
       if (profileError) throw profileError;
       profile = data;
     }
