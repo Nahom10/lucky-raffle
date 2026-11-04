@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { raffleApi } from './raffle-api.js';
 
 const money = (value) => new Intl.NumberFormat('en-ET', { style: 'currency', currency: 'ETB' }).format(Number(value || 0));
@@ -36,7 +36,7 @@ function Admin({ session, raffles, refresh }) {
 }
 
 export default function RaffleApp() {
-  const [session, setSession] = useState(null); const [raffles, setRaffles] = useState([]); const [balance, setBalance] = useState(0); const [tab, setTab] = useState('raffles'); const [error, setError] = useState(''); const [loading, setLoading] = useState(false);
+  const [session, setSession] = useState(null); const [raffles, setRaffles] = useState([]); const [balance, setBalance] = useState(0); const [tab, setTab] = useState('raffles'); const [error, setError] = useState(''); const [loading, setLoading] = useState(true); const signInStarted = useRef(false);
   const refresh = useCallback(async (active = session) => { if (!active) return; const [list, wallet] = await Promise.all([raffleApi.raffles(active.access_token, active.profile.isAdmin), raffleApi.balance(active.access_token, active.profile.id)]); setRaffles(list); setBalance(wallet[0]?.balance || 0); }, [session]);
   useEffect(() => { if (session) refresh().catch((e) => setError(e.message)); }, [session, refresh]);
   useEffect(() => {
@@ -44,9 +44,10 @@ export default function RaffleApp() {
     const interval = window.setInterval(() => refresh().catch(() => {}), 15000);
     return () => window.clearInterval(interval);
   }, [session, tab, refresh]);
-  async function signIn() { try { setLoading(true); setError(''); const initData = telegramInitData(); if (!initData) throw new Error('Open Lucky Raffle from its Telegram Mini App to sign in.'); const next = await raffleApi.signIn(initData); setSession(next); } catch (e) { setError(e.message); } finally { setLoading(false); } }
+  const signIn = useCallback(async () => { try { setLoading(true); setError(''); const initData = telegramInitData(); if (!initData) throw new Error('Open Lucky Raffle from the bot\'s Open Lucky Raffle button.'); const next = await raffleApi.signIn(initData); setSession(next); } catch (e) { setError(e.message); } finally { setLoading(false); } }, []);
+  useEffect(() => { if (!signInStarted.current) { signInStarted.current = true; signIn(); } }, [signIn]);
   if (!raffleApi.configured) return <main className="raffle-shell"><h1>Lucky Raffle</h1><Notice error>Configuration required: add the public Supabase URL and anonymous key before opening this Mini App.</Notice></main>;
-  if (!session) return <main className="raffle-shell raffle-landing"><p className="raffle-kicker">Transparent draws. Real ownership.</p><h1>Lucky Raffle</h1><p>Buy a numbered ticket with your wallet, watch sales live, and verify every winning draw after the seed is revealed.</p><button className="raffle-button" onClick={signIn} disabled={loading}>{loading ? 'Signing in…' : 'Continue with Telegram'}</button>{error && <Notice error>{error}</Notice>}</main>;
+  if (!session) return <main className="raffle-shell raffle-landing"><p className="raffle-kicker">Lucky Raffle</p><h1>{loading ? 'Opening your raffle…' : 'Unable to open Lucky Raffle'}</h1><p>{loading ? 'Signing you in securely with Telegram.' : 'Open Lucky Raffle from the button sent by the bot, then try again.'}</p>{error && <Notice error>{error}</Notice>}</main>;
   if (!session.profile.phone) return <main className="raffle-shell"><RegistrationPending /></main>;
   return <main className="raffle-shell"><header className="raffle-header"><div><p className="raffle-kicker">Lucky Raffle</p><h1>Hello, {session.profile.name}</h1></div><button className="wallet-chip" onClick={() => setTab('wallet')}>Wallet {money(balance)}</button></header><nav className="raffle-tabs">{['raffles', 'wallet', ...(session.profile.isAdmin ? ['admin'] : [])].map((item) => <button className={tab === item ? 'active' : ''} key={item} onClick={() => setTab(item)}>{item}</button>)}</nav>{error && <Notice error>{error}</Notice>}{tab === 'wallet' ? <Wallet session={session} refresh={refresh} /> : tab === 'admin' ? <Admin session={session} raffles={raffles} refresh={refresh} /> : <section className="raffle-list">{raffles.map((raffle) => <article className="raffle-card" key={raffle.id}><div className="raffle-card-head"><span className={`raffle-status ${raffle.status}`}>{raffle.status}</span><span>{raffle.type === 'item' ? raffle.item_name : `${money(raffle.price)} / number`}</span></div><h2>{raffle.title}</h2><p>{raffle.type === 'cash' ? 'Cash prizes are calculated from the published prize schedule.' : `Win: ${raffle.item_name}`}</p><div className="raffle-meta"><span>{raffle.total_numbers} numbers</span><span>{raffle.max_per_user ? `Max ${raffle.max_per_user} per player` : 'No player limit'}</span></div>{raffle.status === 'open' ? <TicketPicker raffle={raffle} token={session.access_token} onPurchased={refresh} /> : <p className="muted">{raffle.status === 'drawn' ? 'Draw complete — results are publicly verifiable.' : 'Sales are closed.'}</p>}</article>)}{!raffles.length && <div className="raffle-panel">No raffles are open right now. Check back soon.</div>}</section>}</main>;
 }
