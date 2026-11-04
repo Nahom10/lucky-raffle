@@ -8,7 +8,7 @@ Deno.serve(async (request) => {
   try {
     const { initData } = await request.json();
     const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
-    const jwtSecret = Deno.env.get('SUPABASE_JWT_SECRET');
+    const jwtSecret = Deno.env.get('RAFFLE_JWT_SECRET');
     const url = Deno.env.get('SUPABASE_URL');
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     if (!botToken || !jwtSecret || !url || !serviceKey) throw new Error('Server authentication is not configured');

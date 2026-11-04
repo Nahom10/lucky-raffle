@@ -12,7 +12,7 @@ Deploy the functions with JWT gateway verification disabled because `telegram-au
 supabase functions deploy telegram-auth --no-verify-jwt
 supabase functions deploy sms-webhook --no-verify-jwt
 supabase functions deploy raffle-admin --no-verify-jwt
-supabase secrets set TELEGRAM_BOT_TOKEN=... SUPABASE_JWT_SECRET=... RAFFLE_SMS_WEBHOOK_SECRET=...
+supabase secrets set TELEGRAM_BOT_TOKEN=... RAFFLE_JWT_SECRET=... RAFFLE_SMS_WEBHOOK_SECRET=...
 ```
 
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided to Edge Functions by Supabase. Never publish the service-role key. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` only in the Mini App host.

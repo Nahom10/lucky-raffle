@@ -12,7 +12,7 @@ async function entropy() {
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   try {
-    const secret = Deno.env.get('SUPABASE_JWT_SECRET');
+    const secret = Deno.env.get('RAFFLE_JWT_SECRET');
     const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
     if (!secret || !token) return json({ error: 'UNAUTHORIZED' }, 401);
     const session = await verifyJwt(token, secret);
