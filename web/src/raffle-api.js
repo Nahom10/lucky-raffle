@@ -19,6 +19,7 @@ export const raffleApi = {
   tickets: (token, raffleId) => call(`/rest/v1/ticket_public?raffle_id=eq.${encodeURIComponent(raffleId)}&select=number,name,is_house,phone_masked,mine&order=number.asc`, { token }),
   myTickets: (token) => call('/rest/v1/tickets?select=raffle_id,number,created_at&order=created_at.desc', { token }),
   deposits: (token) => call('/rest/v1/deposits?select=*&order=created_at.desc', { token }),
+  paymentSettings: () => call('/rest/v1/settings?key=eq.merchant_payment&select=value'),
   withdrawals: (token) => call('/rest/v1/withdrawals?select=*&order=created_at.desc', { token }),
   draws: (raffleId) => call(`/rest/v1/draws?raffle_id=eq.${encodeURIComponent(raffleId)}&select=*`),
   rpc: (token, name, args) => call(`/rest/v1/rpc/${name}`, { token, method: 'POST', body: args }),
