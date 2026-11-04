@@ -15,7 +15,7 @@ Standalone Telegram Mini App for Lucky Raffle.
 
 ## Phase 1 deliverable
 
-The standalone migrations are [`supabase/migrations/001_init.sql`](supabase/migrations/001_init.sql) and [`supabase/migrations/002_operations.sql`](supabase/migrations/002_operations.sql). Apply them to a new Supabase project in sequence.
+The standalone migrations are in [`supabase/migrations`](supabase/migrations). Apply them in numeric order. Migration `004_minimum_deposit_10_etb.sql` lowers the minimum player deposit to 10 ETB.
 
 The first administrator is created by setting their profile's `is_admin` flag using the Supabase dashboard or service role after their first Telegram login.
 
