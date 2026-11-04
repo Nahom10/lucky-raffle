@@ -10,7 +10,7 @@ Deno.serve(async (request) => {
     const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
     const jwtSecret = Deno.env.get('RAFFLE_JWT_SECRET');
     const url = Deno.env.get('SUPABASE_URL');
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const serviceKey = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') || '{}').default || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     if (!botToken || !jwtSecret || !url || !serviceKey) throw new Error('Server authentication is not configured');
     const telegram = await verifyTelegramInitData(initData, botToken);
     const admin = createClient(url, serviceKey, { auth: { persistSession: false } });

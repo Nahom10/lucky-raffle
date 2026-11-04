@@ -16,7 +16,8 @@ Deno.serve(async (request) => {
     const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
     if (!secret || !token) return json({ error: 'UNAUTHORIZED' }, 401);
     const session = await verifyJwt(token, secret);
-    const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
+    const serviceKey = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') || '{}').default || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const db = createClient(Deno.env.get('SUPABASE_URL')!, serviceKey, { auth: { persistSession: false } });
     const { data: profile } = await db.from('profiles').select('is_admin').eq('id', session.sub).single();
     if (!profile?.is_admin && session.app_role !== 'admin') return json({ error: 'FORBIDDEN' }, 403);
     const body = await request.json();
