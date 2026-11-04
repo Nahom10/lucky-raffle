@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { raffleApi } from './raffle-api.js';
 
 const money = (value) => new Intl.NumberFormat('en-ET', { style: 'currency', currency: 'ETB' }).format(Number(value || 0));
@@ -36,7 +36,7 @@ function Admin({ session, raffles, refresh }) {
 }
 
 export default function RaffleApp() {
-  const [session, setSession] = useState(null); const [raffles, setRaffles] = useState([]); const [balance, setBalance] = useState(0); const [tab, setTab] = useState('raffles'); const [error, setError] = useState(''); const [loading, setLoading] = useState(true); const signInStarted = useRef(false);
+  const [session, setSession] = useState(null); const [raffles, setRaffles] = useState([]); const [balance, setBalance] = useState(0); const [tab, setTab] = useState('raffles'); const [error, setError] = useState(''); const [loading, setLoading] = useState(true);
   const refresh = useCallback(async (active = session) => { if (!active) return; const [list, wallet] = await Promise.all([raffleApi.raffles(active.access_token, active.profile.isAdmin), raffleApi.balance(active.access_token, active.profile.id)]); setRaffles(list); setBalance(wallet[0]?.balance || 0); }, [session]);
   useEffect(() => { if (session) refresh().catch((e) => setError(e.message)); }, [session, refresh]);
   useEffect(() => {
@@ -44,8 +44,18 @@ export default function RaffleApp() {
     const interval = window.setInterval(() => refresh().catch(() => {}), 15000);
     return () => window.clearInterval(interval);
   }, [session, tab, refresh]);
-  const signIn = useCallback(async () => { try { setLoading(true); setError(''); const initData = telegramInitData(); if (!initData) throw new Error('Open Lucky Raffle from the bot\'s Open Lucky Raffle button.'); const next = await raffleApi.signIn(initData); setSession(next); } catch (e) { setError(e.message); } finally { setLoading(false); } }, []);
-  useEffect(() => { if (!signInStarted.current) { signInStarted.current = true; signIn(); } }, [signIn]);
+  const signIn = useCallback(async () => { try { setLoading(true); setError(''); const initData = telegramInitData(); if (!initData) throw new Error('Telegram session data is unavailable. Close this window and reopen it from the bot.'); const next = await raffleApi.signIn(initData); setSession(next); } catch (e) { setError(e.message); } finally { setLoading(false); } }, []);
+  useEffect(() => {
+    let timer; let attempts = 0; let cancelled = false;
+    const waitForTelegram = () => {
+      if (cancelled) return;
+      if (telegramInitData() || attempts >= 20) { signIn(); return; }
+      attempts += 1;
+      timer = window.setTimeout(waitForTelegram, 250);
+    };
+    waitForTelegram();
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [signIn]);
   if (!raffleApi.configured) return <main className="raffle-shell"><h1>Lucky Raffle</h1><Notice error>Configuration required: add the public Supabase URL and anonymous key before opening this Mini App.</Notice></main>;
   if (!session) return <main className="raffle-shell raffle-landing"><p className="raffle-kicker">Lucky Raffle</p><h1>{loading ? 'Opening your raffle…' : 'Unable to open Lucky Raffle'}</h1><p>{loading ? 'Signing you in securely with Telegram.' : 'Open Lucky Raffle from the button sent by the bot, then try again.'}</p>{error && <Notice error>{error}</Notice>}</main>;
   if (!session.profile.phone) return <main className="raffle-shell"><RegistrationPending /></main>;
