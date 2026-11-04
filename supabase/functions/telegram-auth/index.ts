@@ -20,22 +20,20 @@ Deno.serve(async (request) => {
     if (error) throw error;
     if (!profile) {
       const email = `telegram-${telegram.id}@lucky-raffle.invalid`;
-      const { data: created, error: createError } = await admin.auth.admin.createUser({
-        email, email_confirm: true,
-        user_metadata: { telegram_id: telegram.id, name: telegram.first_name || telegram.username || `Player ${telegram.id}` },
-      });
-      let authUser = created?.user;
-      if (createError || !authUser) {
-        // A previous, interrupted signup can leave an auth user without a
-        // profile. Recover that account rather than rejecting the player.
-        const { data: users, error: usersError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-        if (usersError) throw usersError;
-        authUser = users.users.find((user) => user.email === email);
-        if (!authUser) throw createError || new Error('Could not create player');
+      const { data: users, error: usersError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      if (usersError) throw usersError;
+      let authUser = users.users.find((user) => user.email === email || String(user.user_metadata?.telegram_id) === String(telegram.id));
+      if (!authUser) {
+        const { data: created, error: createError } = await admin.auth.admin.createUser({
+          email, email_confirm: true,
+          user_metadata: { telegram_id: telegram.id, name: telegram.first_name || telegram.username || `Player ${telegram.id}` },
+        });
+        if (createError || !created.user) throw createError || new Error('Could not create player');
+        authUser = created.user;
       }
-      const { data, error: profileError } = await admin.from('profiles').insert({
+      const { data, error: profileError } = await admin.from('profiles').upsert({
         id: authUser.id, telegram_id: telegram.id, name: contact?.name || telegram.first_name || telegram.username || `Player ${telegram.id}`, phone: contact?.phone || null,
-      }).select().single();
+      }, { onConflict: 'telegram_id' }).select().single();
       if (profileError) throw profileError;
       profile = data;
     } else if (contact?.phone && profile.phone !== contact.phone) {
